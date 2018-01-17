@@ -1,39 +1,4 @@
-class SwitchException(SyntaxError):
-    pass
-
-class UnusedException(BaseException):
-    pass
-
-def switch(value):
-    globals()['__switch'] = value
-    raise SwitchException("No default case given")
-
-def case(value):
-    if value == globals()['__switch']:
-        del globals()['__switch']
-        return SwitchException
-    return UnusedException
-
-class Select(object):
-    def __enter__(self):
-        class SwitchCase:
-            def switch(self, value):
-                self.value = value
-                raise SwitchException
-
-            def case(self, value):
-                if value == self.value:
-                    return SwitchException
-                return UnusedException
-        sc = SwitchCase()
-        return sc.switch, sc.case
-
-    def __exit__(self, type, value, traceback):
-        return isinstance(value, SwitchException)
-
-select = Select()
-
-class MetaCase(dict):
+class CaseMeta(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self['__cases__'] = []
@@ -44,10 +9,11 @@ class MetaCase(dict):
         else:
             super().__setitem__(name, value)
 
-class MetaSwitch(type):
+
+class SwitchMeta(type):
     @classmethod
     def __prepare__(metacls, name, bases):
-        return MetaCase()
+        return CaseMeta()
 
     def __new__(cls, name, bases, clsdict):
         if '__annotations__' in clsdict and 'switch' in clsdict['__annotations__']:
@@ -66,6 +32,6 @@ class MetaSwitch(type):
 
         return super().__new__(cls, name, bases, dict(clsdict))
 
-class Switch(metaclass=MetaSwitch):
-    pass
 
+class Switch(metaclass=SwitchMeta):
+    pass
